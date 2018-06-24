@@ -1,5 +1,6 @@
 package com.example.aa.moneytap;
 
+import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
@@ -7,6 +8,7 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,6 +33,9 @@ public class DetailActivity extends AppCompatActivity {
     RecyclerView recycler_view;
     RecyclerView.Adapter rAdapter;
     RecyclerView.LayoutManager layoutManager;
+    ProgressDialog progressDialog;
+    WebView webView;
+    TextView tv_description;
 
     List<Item> itemDetails;
 
@@ -46,14 +51,16 @@ public class DetailActivity extends AppCompatActivity {
 
         rq = Volley.newRequestQueue(this);
         recycler_view = (RecyclerView)findViewById(R.id.recycler_view);
+        webView = (WebView)findViewById(R.id.webView);
+        tv_description = (TextView)findViewById(R.id.tv_description);
         layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         recycler_view.setLayoutManager(layoutManager);
         itemDetails = new ArrayList<>();
 
 
         Bundle b = getIntent().getExtras();
-        String name = null;
-        String number = null;
+        String name ;
+
         if (b != null) {
             name = b.getString("itemname");
             System.out.println(name);
@@ -69,17 +76,26 @@ public class DetailActivity extends AppCompatActivity {
 
         String sl = "https://en.wikipedia.org//w/api.php?action=query&format=json&prop=pageimages%7Cpageterms&generator=prefixsearch&redirects=1&formatversion=2&piprop=thumbnail&pithumbsize=50&pilimit=10&wbptterms=description&gpssearch=Sachin+T&gpslimit=10";
         System.out.println(sl);
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setTitle("ProgressDialog");
+        progressDialog.setMessage("Loading...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, sl, null,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
                         try {
+
                             JSONObject jObj = new JSONObject(response.toString());
                             System.out.println("jobj :" + jObj.toString());
                             final JSONObject jobj = jObj.optJSONObject("query");
                             final JSONArray jarr = jobj.getJSONArray("pages");
-
+                            progressDialog.dismiss();
                             for (int i = 0; i < jarr.length(); i++) {
                                 JSONObject jObject = jarr.getJSONObject(i);
                                 Item idata = new Item();
@@ -100,6 +116,8 @@ public class DetailActivity extends AppCompatActivity {
 
                                 }catch (JSONException e){
                                     e.printStackTrace();
+
+
                                 }
 
                                 itemDetails.add(idata);
@@ -110,45 +128,19 @@ public class DetailActivity extends AppCompatActivity {
                             recycler_view.addOnItemTouchListener(new RecyclerTouchListener(getApplicationContext(),recycler_view, new RecyclerTouchListener.ClickListener() {
                                 @Override
                                 public void onClick(View view, int position) {
-                                    Toast.makeText(getApplicationContext(), "Position_is" + position, Toast.LENGTH_SHORT).show();
-                                    JSONObject job = null;
+                                    JSONObject job;
                                     try {
                                         job = jarr.getJSONObject(position);
+                                        String id  = job != null ? job.getString("pageid") : null;
+                                        webView.getSettings().getJavaScriptEnabled();
+                                        webView.loadUrl("http://en.wikipedia.org/?curid="+id);
+
                                     } catch (JSONException e) {
                                         e.printStackTrace();
                                     }
-                                    try {
-                                        JSONArray jsArray = null;
-                                        String s;
-                                        if (job != null) {
-                                            jsArray = job.getJSONObject("terms").getJSONArray("description");
-
-                                        }
-                                        String list[]=null;
-                                        int len = 0;
-                                        if (jsArray != null) {
-                                            len = jsArray.length();
-                                        }
-                                        list = new String[len];
-
-                                        for(int j=0; j<len; j++){
-                                            String k = jsArray.getString(j);
-                                            list[j] = k;
-                                        }
-                                       s = job != null ? job.getString("title") : null;
-                                        String id = job != null ? job.getString("pageid") : null;
-
-                                        Intent in = new Intent(DetailActivity.this,DetailWeb.class);
-                                        System.out.println("Array_detail"+Arrays.toString(list));
-                                        Bundle bun = new Bundle();
-                                        bun.putString("page",id);
-                                        in.putExtras(bun);
-                                        startActivity(in);
 
 
-                                    }catch(Exception e){
-                                        e.printStackTrace();
-                                    }
+
                                 }
 
                                 @Override
@@ -166,6 +158,7 @@ public class DetailActivity extends AppCompatActivity {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         System.out.println("Error Occur" + error);
+
                     }
                 }
 
