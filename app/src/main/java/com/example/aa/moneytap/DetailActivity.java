@@ -63,7 +63,7 @@ public class DetailActivity extends AppCompatActivity {
 
         if (b != null) {
             name = b.getString("itemname");
-            System.out.println(name);
+            
 
         }
 
